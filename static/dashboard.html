@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas AI Labs - Dashboard</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .status-bar {
+            background: rgba(255,255,255,0.95);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 10px;
+        }
+
+        .status-item .number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .status-item .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 5px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #42a5f5, #478ed1);
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #66bb6a, #4caf50);
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #ffa726, #ff9800);
+        }
+
+        .btn-info {
+            background: linear-gradient(45deg, #26c6da, #00bcd4);
+        }
+
+        .course-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .course-item {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            gap: 10px;
+        }
+
+        .course-name {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .assignment-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .assignment-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .assignment-name {
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+
+        .assignment-meta {
+            font-size: 0.8rem;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .loading i {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .ai-response {
+            background: rgba(103, 126, 234, 0.1);
+            border: 2px solid rgba(103, 126, 234, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .ai-response h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .urgency-high { border-left-color: #f44336; }
+        .urgency-medium { border-left-color: #ff9800; }
+        .urgency-low { border-left-color: #4caf50; }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .schedule-day {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .schedule-date {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .schedule-task {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .priority-high { border-left: 4px solid #f44336; }
+        .priority-medium { border-left: 4px solid #ff9800; }
+        .priority-low { border-left: 4px solid #4caf50; }
+
+        .assignment-name a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .assignment-name a:hover {
+            color: #4c63d2;
+            text-decoration: underline;
+        }
+
+        .assignment-name a:visited {
+            color: #764ba2;
+        }
+
+        .assignment-name a i {
+            margin-left: 5px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="dashboard">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-graduation-cap"></i> Canvas AI Labs</h1>
+                <p>Your Intelligent Academic Assistant</p>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="number">{{ courses.length }}</div>
+                        <div class="label">Courses</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="number">{{ assignments.length }}</div>
+                        <div class="label">Assignments</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="number">{{ upcomingDeadlines.length }}</div>
+                        <div class="label">Upcoming Deadlines</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="number">{{ schedulerJobs.length }}</div>
+                        <div class="label">Scheduled Jobs</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard Grid -->
+            <div class="card-grid">
+                <!-- Data Management Card -->
+                <div class="card">
+                    <h3><i class="fas fa-database"></i> Data Management</h3>
+                    
+                    <button class="btn" @click="getCourses" :disabled="loading.courses">
+                        <i class="fas fa-book" v-if="!loading.courses"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Get Courses
+                    </button>
+                    
+                    <button class="btn btn-secondary" @click="getAllAssignments" :disabled="loading.assignments">
+                        <i class="fas fa-tasks" v-if="!loading.assignments"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Get All Assignments
+                    </button>
+                    
+                    <button class="btn btn-success" @click="syncAll" :disabled="loading.sync">
+                        <i class="fas fa-sync" v-if="!loading.sync"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Full Sync
+                    </button>
+
+                    <!-- Course List -->
+                    <div v-if="courses.length > 0" class="course-list">
+                        <div v-for="course in courses" :key="course.id" class="course-item">
+                            <span class="course-name">{{ course.name || `Course ${course.id}` }}</span>
+                            <button class="btn btn-info" @click="getCourseAssignments(course.id)" style="font-size: 0.8rem; padding: 6px 12px;">
+                                <i class="fas fa-list"></i>
+                                Assignments
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- If assignments were fetched, show a compact list with links -->
+                    <div v-if="assignments.length > 0" class="assignment-list" style="margin-top:12px;">
+                        <div v-for="a in assignments.slice(0, 25)" :key="a.assignment_id" class="assignment-item">
+                            <div class="assignment-name">
+                                <a v-if="a.html_url" :href="a.html_url" target="_blank" rel="noopener">
+                                    {{ a.name }} <i class="fas fa-external-link-alt" style="font-size:0.8rem;"></i>
+                                </a>
+                                <span v-else>{{ a.name }}</span>
+                            </div>
+                            <div class="assignment-meta">
+                                <span>Course: {{ a.course_id }}</span>
+                                <span v-if="a.due_at">Due: {{ a.due_at }}</span>
+                            </div>
+                        </div>
+                        <div v-if="assignments.length > 25" class="loading">Showing first 25...</div>
+                    </div>
+                </div>
+
+                <!-- AI Assistant Card -->
+                <div class="card">
+                    <h3><i class="fas fa-robot"></i> AI Assistant</h3>
+                    
+                    <div class="tabs">
+                        <div class="tab" :class="{ active: activeTab === 'chat' }" @click="activeTab = 'chat'">
+                            Chat
+                        </div>
+                        <div class="tab" :class="{ active: activeTab === 'analyze' }" @click="activeTab = 'analyze'">
+                            Analyze
+                        </div>
+                        <div class="tab" :class="{ active: activeTab === 'plan' }" @click="activeTab = 'plan'">
+                            Study Plan
+                        </div>
+                    </div>
+
+                    <!-- Chat Tab -->
+                    <div v-if="activeTab === 'chat'">
+                        <div class="input-group">
+                            <input v-model="chatQuestion" placeholder="Ask me anything about your coursework..." @keyup.enter="askQuestion">
+                            <button class="btn" @click="askQuestion" :disabled="loading.chat">
+                                <i class="fas fa-paper-plane" v-if="!loading.chat"></i>
+                                <i class="fas fa-spinner fa-spin" v-else></i>
+                            </button>
+                        </div>
+                        
+                        <div v-if="chatResponse" class="ai-response">
+                            <h4><i class="fas fa-robot"></i> AI Response:</h4>
+                            <p>{{ chatResponse }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Analyze Tab -->
+                    <div v-if="activeTab === 'analyze'">
+                        <div class="input-group">
+                            <input v-model="analysisId" placeholder="Enter Assignment ID to analyze..." type="number">
+                            <button class="btn btn-warning" @click="analyzeAssignment" :disabled="loading.analysis">
+                                <i class="fas fa-search" v-if="!loading.analysis"></i>
+                                <i class="fas fa-spinner fa-spin" v-else></i>
+                                Analyze
+                            </button>
+                        </div>
+                        
+                        <div v-if="analysisResult" class="ai-response">
+                            <h4><i class="fas fa-chart-line"></i> Analysis Result:</h4>
+                            <p><strong>Type:</strong> {{ analysisResult.analysis.assignment_type }}</p>
+                            <p><strong>Complexity:</strong> {{ analysisResult.analysis.complexity }}</p>
+                            <p><strong>Estimated Hours:</strong> {{ analysisResult.analysis.estimated_hours }}</p>
+                            <p><strong>Approach:</strong> {{ analysisResult.analysis.suggested_approach }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Study Plan Tab -->
+                    <div v-if="activeTab === 'plan'">
+                        <button class="btn btn-success" @click="generateStudyPlan" :disabled="loading.studyPlan">
+                            <i class="fas fa-calendar-alt" v-if="!loading.studyPlan"></i>
+                            <i class="fas fa-spinner fa-spin" v-else></i>
+                            Generate 7-Day Study Plan
+                        </button>
+                        
+                        <div v-if="studyPlan" class="ai-response">
+                            <h4><i class="fas fa-calendar-check"></i> Your Study Plan:</h4>
+                            <p><strong>Strategy:</strong> {{ studyPlan.study_plan.study_strategy }}</p>
+                            <p><strong>Total Hours:</strong> {{ studyPlan.study_plan.total_estimated_hours }}</p>
+                            
+                            <div v-for="day in studyPlan.study_plan.daily_plan" :key="day.day" class="schedule-day">
+                                <div class="schedule-date">Day {{ day.day }} - {{ day.date }}</div>
+                                <div v-for="task in day.tasks" :key="task.assignment" class="schedule-task" :class="`priority-${task.priority}`">
+                                    <strong>{{ task.assignment }}</strong> ({{ task.course }})<br>
+                                    {{ task.task }} - {{ task.estimated_hours }}h
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deadlines Card -->
+                <div class="card">
+                    <h3><i class="fas fa-clock"></i> Upcoming Deadlines</h3>
+                    
+                    <button class="btn" @click="getDeadlines" :disabled="loading.deadlines">
+                        <i class="fas fa-calendar" v-if="!loading.deadlines"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Refresh Deadlines
+                    </button>
+                    
+                    <div v-if="upcomingDeadlines.length > 0" class="assignment-list">
+                        <div v-for="deadline in upcomingDeadlines" :key="deadline.assignment_id" 
+                             class="assignment-item" :class="`urgency-${deadline.urgency}`">
+                            <div class="assignment-name">
+                                <a v-if="deadline.html_url" :href="deadline.html_url" target="_blank" rel="noopener">
+                                    {{ deadline.name }} <i class="fas fa-external-link-alt" style="font-size: 0.8rem;"></i>
+                                </a>
+                                <span v-else>{{ deadline.name }}</span>
+                            </div>
+                            <div class="assignment-meta">
+                                <span>{{ deadline.course_name }}</span>
+                                <span>{{ deadline.days_until_due }} days | {{ deadline.points_possible }} pts</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div v-else-if="!loading.deadlines" class="loading">
+                        <p>No upcoming deadlines found</p>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Card -->
+                <div class="card">
+                    <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
+                    
+                    <button class="btn btn-info" @click="getRecommendations" :disabled="loading.recommendations">
+                        <i class="fas fa-lightbulb" v-if="!loading.recommendations"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Get AI Recommendations
+                    </button>
+                    
+                    <button class="btn btn-warning" @click="getWorkloadAnalysis" :disabled="loading.workload">
+                        <i class="fas fa-chart-bar" v-if="!loading.workload"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Workload Analysis
+                    </button>
+                    
+                    <button class="btn btn-secondary" @click="getSchedulerStatus" :disabled="loading.scheduler">
+                        <i class="fas fa-cogs" v-if="!loading.scheduler"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Scheduler Status
+                    </button>
+
+                    <button class="btn btn-success" @click="triggerManualSync" :disabled="loading.manualSync">
+                        <i class="fas fa-sync-alt" v-if="!loading.manualSync"></i>
+                        <i class="fas fa-spinner fa-spin" v-else></i>
+                        Manual Sync
+                    </button>
+                    
+                    <div v-if="quickActionResult" class="ai-response">
+                        <h4><i class="fas fa-info-circle"></i> Result:</h4>
+                        <pre>{{ JSON.stringify(quickActionResult, null, 2) }}</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Data
+                    courses: [],
+                    assignments: [],
+                    upcomingDeadlines: [],
+                    schedulerJobs: [],
+                    
+                    // UI state
+                    activeTab: 'chat',
+                    loading: {
+                        courses: false,
+                        assignments: false,
+                        sync: false,
+                        deadlines: false,
+                        chat: false,
+                        analysis: false,
+                        studyPlan: false,
+                        recommendations: false,
+                        workload: false,
+                        scheduler: false,
+                        manualSync: false
+                    },
+                    
+                    // Forms
+                    chatQuestion: '',
+                    analysisId: '',
+                    
+                    // Responses
+                    chatResponse: '',
+                    analysisResult: null,
+                    studyPlan: null,
+                    quickActionResult: null
+                }
+            },
+            mounted() {
+                // Load initial data
+                this.getDeadlines();
+                this.getSchedulerStatus();
+            },
+            methods: {
+                async apiCall(endpoint, options = {}) {
+                    try {
+                        const response = await axios({
+                            url: `/api/${endpoint}`,
+                            ...options
+                        });
+                        return response.data;
+                    } catch (error) {
+                        console.error('API Error:', error);
+                        alert('Error: ' + (error.response?.data?.detail || error.message));
+                        return null;
+                    }
+                },
+
+                async getCourses() {
+                    this.loading.courses = true;
+                    const data = await this.apiCall('courses');
+                    if (data && data.courses) {
+                        this.courses = data.courses;
+                    }
+                    this.loading.courses = false;
+                },
+
+                async getAllAssignments() {
+                    this.loading.assignments = true;
+                    const data = await this.apiCall('assignments');
+                    if (data && data.assignments) {
+                        this.assignments = data.assignments;
+                    }
+                    this.loading.assignments = false;
+                },
+
+                async getCourseAssignments(courseId) {
+                    // For now, show all assignments filtered by course
+                    await this.getAllAssignments();
+                    const courseAssignments = this.assignments.filter(a => a.course_id === courseId);
+                    this.quickActionResult = {
+                        course_id: courseId,
+                        assignments: courseAssignments
+                    };
+                },
+
+                async syncAll() {
+                    this.loading.sync = true;
+                    await this.apiCall('sync/full', { method: 'POST' });
+                    this.loading.sync = false;
+                    // Refresh data after sync
+                    this.getCourses();
+                    this.getAllAssignments();
+                    this.getDeadlines();
+                },
+
+                async getDeadlines() {
+                    this.loading.deadlines = true;
+                    const data = await this.apiCall('ai/deadlines?days_ahead=14');
+                    if (data && data.deadlines) {
+                        this.upcomingDeadlines = data.deadlines;
+                    }
+                    this.loading.deadlines = false;
+                },
+
+                async askQuestion() {
+                    if (!this.chatQuestion.trim()) return;
+                    
+                    this.loading.chat = true;
+                    const data = await this.apiCall(`llm/ask?question=${encodeURIComponent(this.chatQuestion)}`, {
+                        method: 'POST'
+                    });
+                    if (data && data.answer) {
+                        this.chatResponse = data.answer;
+                    }
+                    this.loading.chat = false;
+                },
+
+                async analyzeAssignment() {
+                    if (!this.analysisId) return;
+                    
+                    this.loading.analysis = true;
+                    const data = await this.apiCall(`llm/assignment/${this.analysisId}`, {
+                        method: 'POST'
+                    });
+                    if (data && data.analysis) {
+                        this.analysisResult = data;
+                    }
+                    this.loading.analysis = false;
+                },
+
+                async generateStudyPlan() {
+                    this.loading.studyPlan = true;
+                    const data = await this.apiCall('llm/study-plan?days_ahead=7', {
+                        method: 'POST'
+                    });
+                    if (data && data.study_plan) {
+                        this.studyPlan = data;
+                    }
+                    this.loading.studyPlan = false;
+                },
+
+                async getRecommendations() {
+                    this.loading.recommendations = true;
+                    const data = await this.apiCall('ai/recommendations');
+                    this.quickActionResult = data;
+                    this.loading.recommendations = false;
+                },
+
+                async getWorkloadAnalysis() {
+                    this.loading.workload = true;
+                    const data = await this.apiCall('ai/workload');
+                    this.quickActionResult = data;
+                    this.loading.workload = false;
+                },
+
+                async getSchedulerStatus() {
+                    this.loading.scheduler = true;
+                    const data = await this.apiCall('scheduler/status');
+                    if (data && data.jobs) {
+                        this.schedulerJobs = data.jobs;
+                        this.quickActionResult = data;
+                    }
+                    this.loading.scheduler = false;
+                },
+
+                async triggerManualSync() {
+                    this.loading.manualSync = true;
+                    const data = await this.apiCall('scheduler/sync-now', { method: 'POST' });
+                    this.quickActionResult = data;
+                    this.loading.manualSync = false;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
