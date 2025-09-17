@@ -1,7 +1,7 @@
-from .user import User
-from .course import Course
 from .assignment import Assignment
-from .sync_run import SyncRun
+from .course import Course
 from .notification_log import NotificationLog
+from .sync_run import SyncRun
+from .user import User
 
 __all__ = ["User", "Course", "Assignment", "SyncRun", "NotificationLog"]

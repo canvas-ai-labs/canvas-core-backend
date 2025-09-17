@@ -1,0 +1,32 @@
+[tool.black]
+target-version = ["py311"]
+line-length = 100
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = [
+  "E","F","W",      # pycodestyle/pyflakes
+  "I",                 # isort
+  "UP",                # pyupgrade
+  "B",                 # bugbear
+  "C90",               # mccabe
+  "S",                 # bandit (sec checks)
+]
+ignore = [
+  "E203",  # whitespace before ':' (black-compatible)
+  "S101",  # allow asserts in tests
+  "B008",  # FastAPI Depends in defaults is a pattern we accept
+  "E501",  # Let black handle long lines
+  "B904",  # HTTPException raise from not necessary here
+  "S110",  # try/except/continue allowed in sync loops
+  "W191",  # tabs (should be gone, but avoid noise)
+]
+fix = true
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,10 @@
+{
+  "pythonVersion": "3.11",
+  "venvPath": "./venv",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "exclude": [
+    "alembic/versions/*",
+    "venv"
+  ]
+}

@@ -1,53 +1,78 @@
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from contextlib import asynccontextmanager
+import logging
 import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from backend.api.routes import router
+from backend.config import get_settings
 from backend.services.scheduler_service import initialize_scheduler, scheduler_service
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    print("🚀 Starting Canvas AI Labs Backend...")
-    
+    logger = logging.getLogger("uvicorn.error")
+    logger.info("🚀 Starting Canvas AI Labs Backend...")
+
     # Initialize background scheduler
-    scheduler = initialize_scheduler()
-    print("⏰ Background scheduler initialized")
-    
+    try:
+        initialize_scheduler()
+        logger.info("⏰ Background scheduler initialized")
+    except Exception as exc:
+        logger.exception("Failed to initialize background scheduler: %s", exc)
+
     yield
-    
+
     # Shutdown
-    print("🛑 Shutting down Canvas AI Labs Backend...")
-    if scheduler_service:
-        scheduler_service.shutdown()
-    print("✅ Shutdown complete")
+    logger.info("🛑 Shutting down Canvas AI Labs Backend...")
+    try:
+        if scheduler_service:
+            scheduler_service.shutdown()
+    except Exception as exc:
+        logger.exception("Error during scheduler shutdown: %s", exc)
+    logger.info("✅ Shutdown complete")
 
 
 app = FastAPI(
     title="Canvas AI Labs Backend",
     description="Intelligent Canvas assistant with AI-powered insights and automation",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
+# CORS
+settings = get_settings()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins or ["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "Canvas AI Labs Backend is running!"}
 
-# Mount static files
-static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
-if os.path.exists(static_dir):
+
+"""Static files configuration."""
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+static_dir = os.path.join(repo_root, "static")
+if os.path.isdir(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 
 # Serve the dashboard at the root
 @app.get("/")
 def serve_dashboard():
     dashboard_path = os.path.join(static_dir, "dashboard.html")
-    if os.path.exists(dashboard_path):
+    if os.path.isfile(dashboard_path):
         return FileResponse(dashboard_path)
     return {"message": "Dashboard not found"}
+
 
 app.include_router(router, prefix="/api")

@@ -1,56 +1,63 @@
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
 
-from backend.services.canvas_client import get_user_courses, get_all_assignments
-from backend.services.sync_service import CanvasSyncService, get_sync_service
-from backend.services.ai_service import CanvasAIService, get_ai_service
-from backend.services.llm_service import CanvasLLMService, get_llm_service
-from backend.services.mock_llm_service import MockCanvasLLMService, get_mock_llm_service
-from backend.services.scheduler_service import get_scheduler_service, CanvasSchedulerService
 from backend.db.session import get_db
 from backend.models import User
+from backend.services.ai_service import CanvasAIService, get_ai_service
+from backend.services.canvas_client import (
+    get_all_assignments,
+    get_user_courses,
+    get_all_user_courses,
+)
+from backend.services.mock_llm_service import (
+    MockCanvasLLMService,
+    get_mock_llm_service,
+)
+from backend.services.scheduler_service import get_scheduler_service
+from backend.services.sync_service import CanvasSyncService, get_sync_service
 
 router = APIRouter()
 
+
 # Original Canvas API routes
 @router.get("/courses")
-def get_courses():
-    courses = get_user_courses()
+def get_courses(all: bool = False):
+    """Return active + starred courses by default.
+
+    Pass `?all=true` to return all courses (debugging).
+    """
+    courses = get_all_user_courses() if all else get_user_courses()
     return {"courses": courses}
+
 
 @router.get("/assignments")
 def get_assignments():
     assignments = get_all_assignments()
     return {"assignments": assignments}
 
+
 # User management
 @router.post("/user/init")
-def initialize_user(
-    db: Session = Depends(get_db)
-):
+def initialize_user(db: Session = Depends(get_db)):
     """Initialize a default user for testing."""
     # Check if user exists
     user = db.query(User).filter(User.canvas_user_id == 1).first()
     if user:
         return {"message": "User already exists", "user_id": user.id}
-    
+
     # Create default user
-    user = User(
-        canvas_user_id=1,
-        name="Default User",
-        email="user@example.com"
-    )
+    user = User(canvas_user_id=1, name="Default User", email="user@example.com")
     db.add(user)
     db.commit()
-    
+
     return {"message": "User created", "user_id": user.id}
+
 
 # New sync routes
 @router.post("/sync/full")
 def full_sync(
-    user_id: Optional[int] = 1,
-    sync_service: CanvasSyncService = Depends(get_sync_service)
+    user_id: int | None = 1, sync_service: CanvasSyncService = Depends(get_sync_service)
 ):
     """Perform a full sync of user, courses, and assignments."""
     try:
@@ -61,15 +68,15 @@ def full_sync(
             "items_processed": sync_run.items_processed,
             "items_created": sync_run.items_created,
             "items_updated": sync_run.items_updated,
-            "error_message": sync_run.error_message
+            "error_message": sync_run.error_message,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/sync/courses")
 def sync_courses(
-    user_id: Optional[int] = 1,
-    sync_service: CanvasSyncService = Depends(get_sync_service)
+    user_id: int | None = 1, sync_service: CanvasSyncService = Depends(get_sync_service)
 ):
     """Sync courses from Canvas."""
     try:
@@ -79,16 +86,17 @@ def sync_courses(
             "status": sync_run.status,
             "items_processed": sync_run.items_processed,
             "items_created": sync_run.items_created,
-            "items_updated": sync_run.items_updated
+            "items_updated": sync_run.items_updated,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/sync/assignments")
 def sync_assignments(
-    course_ids: Optional[List[int]] = None,
-    user_id: Optional[int] = 1,
-    sync_service: CanvasSyncService = Depends(get_sync_service)
+    course_ids: list[int] | None = None,
+    user_id: int | None = 1,
+    sync_service: CanvasSyncService = Depends(get_sync_service),
 ):
     """Sync assignments from Canvas."""
     try:
@@ -98,17 +106,16 @@ def sync_assignments(
             "status": sync_run.status,
             "items_processed": sync_run.items_processed,
             "items_created": sync_run.items_created,
-            "items_updated": sync_run.items_updated
+            "items_updated": sync_run.items_updated,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # AI-powered routes
 @router.get("/ai/deadlines")
 def get_upcoming_deadlines(
-    days_ahead: int = 7,
-    user_id: int = 1,
-    ai_service: CanvasAIService = Depends(get_ai_service)
+    days_ahead: int = 7, user_id: int = 1, ai_service: CanvasAIService = Depends(get_ai_service)
 ):
     """Get upcoming assignment deadlines with AI insights."""
     try:
@@ -117,10 +124,10 @@ def get_upcoming_deadlines(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/ai/overdue")
 def get_overdue_assignments(
-    user_id: int = 1,
-    ai_service: CanvasAIService = Depends(get_ai_service)
+    user_id: int = 1, ai_service: CanvasAIService = Depends(get_ai_service)
 ):
     """Get overdue assignments."""
     try:
@@ -129,11 +136,9 @@ def get_overdue_assignments(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/ai/workload")
-def get_workload_analysis(
-    user_id: int = 1,
-    ai_service: CanvasAIService = Depends(get_ai_service)
-):
+def get_workload_analysis(user_id: int = 1, ai_service: CanvasAIService = Depends(get_ai_service)):
     """Get course workload analysis."""
     try:
         workload = ai_service.get_course_workload_analysis(user_id)
@@ -141,10 +146,10 @@ def get_workload_analysis(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/ai/recommendations")
 def get_study_recommendations(
-    user_id: int = 1,
-    ai_service: CanvasAIService = Depends(get_ai_service)
+    user_id: int = 1, ai_service: CanvasAIService = Depends(get_ai_service)
 ):
     """Get AI-powered study recommendations."""
     try:
@@ -153,12 +158,13 @@ def get_study_recommendations(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/ai/notify/{assignment_id}")
 def create_deadline_notification(
     assignment_id: int,
     user_id: int = 1,
     notification_type: str = "deadline_reminder",
-    ai_service: CanvasAIService = Depends(get_ai_service)
+    ai_service: CanvasAIService = Depends(get_ai_service),
 ):
     """Create a deadline notification for an assignment."""
     try:
@@ -169,16 +175,16 @@ def create_deadline_notification(
             "notification_id": notification.id,
             "title": notification.title,
             "message": notification.message,
-            "sent_at": notification.sent_at.isoformat()
+            "sent_at": notification.sent_at.isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # LLM-powered intelligence routes (using mock service for demo)
 @router.post("/llm/syllabus/{course_id}")
 def analyze_syllabus(
-    course_id: int,
-    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
+    course_id: int, llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
 ):
     """Analyze and summarize course syllabus using LLM."""
     try:
@@ -187,10 +193,10 @@ def analyze_syllabus(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/llm/assignment/{assignment_id}")
 def analyze_assignment(
-    assignment_id: int,
-    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
+    assignment_id: int, llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
 ):
     """Analyze assignment content and provide insights using LLM."""
     try:
@@ -199,11 +205,12 @@ def analyze_assignment(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/llm/study-plan")
 def generate_study_plan(
     user_id: int = 1,
     days_ahead: int = 14,
-    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
+    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service),
 ):
     """Generate AI-powered personalized study plan."""
     try:
@@ -212,12 +219,13 @@ def generate_study_plan(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/llm/ask")
 def ask_question(
     question: str,
     user_id: int = 1,
-    context_course_id: Optional[int] = None,
-    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service)
+    context_course_id: int | None = None,
+    llm_service: MockCanvasLLMService = Depends(get_mock_llm_service),
 ):
     """Ask questions about coursework with AI-powered responses."""
     try:
@@ -225,6 +233,7 @@ def ask_question(
         return response
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 # Scheduler and automation routes
 @router.get("/scheduler/status")
@@ -236,6 +245,7 @@ def get_scheduler_status():
         return {"scheduler_status": "running", "jobs": jobs}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/scheduler/sync-now")
 def trigger_manual_sync():

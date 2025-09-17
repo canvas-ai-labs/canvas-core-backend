@@ -1,11 +1,15 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
-from sqlalchemy.sql import func
+from __future__ import annotations
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+
 from backend.db.base import Base
+
 
 class SyncRun(Base):
     __tablename__ = "sync_runs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     sync_type = Column(String, nullable=False)  # "courses", "assignments", "full"
@@ -16,6 +20,6 @@ class SyncRun(Base):
     items_created = Column(Integer, default=0)
     items_updated = Column(Integer, default=0)
     error_message = Column(Text, nullable=True)
-    
+
     # Relationships
     user = relationship("User", back_populates="sync_runs")
