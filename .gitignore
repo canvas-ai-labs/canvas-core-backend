@@ -3,6 +3,10 @@ venv/
 env/
 ENV/
 
+# Node modules
+node_modules/
+ui/node_modules/
+
 # Environment variables
 .env
 docker/*.env
