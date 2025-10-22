@@ -5,13 +5,21 @@ import { Checklist } from "@/components/checklist"
 import { WorkloadChart } from "@/components/workload-chart"
 import { WeeklyDigest } from "@/components/weekly-digest"
 import { useChecklist } from "@/hooks/use-checklist"
-import { getAssignments, getCourses } from "@/lib/api"
+import { getAssignments, getCourses, ensureAuthedOrDemo } from "@/lib/api"
 import { CountUp } from "@/components/count-up"
 import type { Course } from "@/types"
 
 // Types per spec
-type Assignment = { course_id:number; assignment_id:number; name?:string; due_at?:string }
+type Assignment = { course_id:number; assignment_id:number; name?:string; due_at?:string; course_name?:string }
 type Todo = { id:string; title:string; done:boolean; createdAt:string }
+
+// Helper: Check if date is within next N days
+function isWithinNextNDays(dueISO: string, n: number): boolean {
+  const now = Date.now()
+  const deadline = new Date(dueISO).getTime()
+  const nDaysFromNow = now + (n * 86400000)
+  return deadline > now && deadline <= nDaysFromNow
+}
 
 export default function Page() {
   const checklist = useChecklist()
@@ -19,33 +27,46 @@ export default function Page() {
   const [courses, setCourses] = useState<Course[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string|undefined>()
+  const [authChecked, setAuthChecked] = useState(false)
 
-  const fetchAll = async () => {
+  const checkAuthAndFetchData = async () => {
     try {
       setLoading(true)
-  const [c, a] = await Promise.all([getCourses(), getAssignments()])
-  const listA: Assignment[] = Array.isArray(a?.assignments) ? a.assignments : (a ?? [])
-  const listC: Course[] = Array.isArray(c?.courses) ? c.courses as Course[] : []
-  setAssignments(listA)
-  setCourses(listC)
+      
+      // Check authentication or demo mode first
+      const authResult = await ensureAuthedOrDemo()
+      setAuthChecked(true)
+      
+      // If we reach here, either authenticated or in demo mode
+      const [c, a] = await Promise.all([getCourses(), getAssignments()])
+      const listA: Assignment[] = Array.isArray(a?.assignments) ? a.assignments : []
+      const listC: Course[] = Array.isArray(c?.courses) ? c.courses as Course[] : []
+      setAssignments(listA)
+      setCourses(listC)
       setError(undefined)
     } catch (e:any) {
+      if (e?.message === 'Authentication required') {
+        // Redirect to login if not authenticated and not in demo mode
+        window.location.href = '/login'
+        return
+      }
       setError(e?.message ?? "Failed to load")
+      setAuthChecked(true)
     } finally {
       setLoading(false)
     }
   }
 
   useEffect(() => {
-    fetchAll()
+    checkAuthAndFetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const upcoming = useMemo(() => {
-    const now = Date.now()
-    const week = now + 7*86400000
-    return assignments.filter(a => a.due_at && new Date(a.due_at).getTime() <= week)
-  }, [assignments])
+  // Derive stats from live API data
+  const upcoming = useMemo(() => 
+    assignments.filter(a => a.due_at && isWithinNextNDays(a.due_at, 7)),
+    [assignments]
+  )
 
   const coursesCount = courses.length
   const assignmentsCount = assignments.length
@@ -62,7 +83,7 @@ export default function Page() {
           </div>
           <button
             className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-full px-4 py-2 text-sm transition"
-            onClick={fetchAll}
+            onClick={checkAuthAndFetchData}
           >Refresh</button>
         </div>
         {error ? (
@@ -70,7 +91,7 @@ export default function Page() {
             <span>Failed to fetch data: {error}</span>
             <button
               className="px-2 py-1 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition"
-              onClick={() => { setError(undefined); fetchAll() }}
+              onClick={() => { setError(undefined); checkAuthAndFetchData() }}
             >Retry</button>
           </div>
         ) : null}
