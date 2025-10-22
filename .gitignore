@@ -7,10 +7,25 @@ ENV/
 node_modules/
 ui/node_modules/
 
+# Next.js build artifacts
+.next/
+out/
+dist/
+build/
+
+# Next.js cache and binaries
+.swc/
+*.tsbuildinfo
+.webpack-cache/
+**/*.hot-update.*
+**/next-swc*.node
+
 # Environment variables
 .env
 docker/*.env
 !docker/*.env.example
+.env.*
+.env.local
 
 # Python cache
 __pycache__/
@@ -60,6 +75,7 @@ wheels/
 .pytest_cache/
 .coverage
 htmlcov/
+coverage/
 
 # Alembic
 alembic/versions/*.py
