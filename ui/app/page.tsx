@@ -5,7 +5,7 @@ import { Checklist } from "@/components/checklist"
 import { WorkloadChart } from "@/components/workload-chart"
 import { WeeklyDigest } from "@/components/weekly-digest"
 import { useChecklist } from "@/hooks/use-checklist"
-import { getAssignments, getCourses, ensureAuthedOrDemo } from "@/lib/api"
+import { getAssignments, getCourses, ensureAuthedOrDemo, apiGet, apiPost, HealthResponse, FullSyncResponse, MetricsResponse } from "@/lib/api"
 import { CountUp } from "@/components/count-up"
 import type { Course } from "@/types"
 
@@ -28,6 +28,8 @@ export default function Page() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string|undefined>()
   const [authChecked, setAuthChecked] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState<string>("")
 
   const checkAuthAndFetchData = async () => {
     try {
@@ -57,6 +59,38 @@ export default function Page() {
     }
   }
 
+  const handleHealthCheck = async () => {
+    try {
+      const health = await apiGet<HealthResponse>('/health')
+      if (health.status === 'ok') {
+        setSyncMessage('✅ Backend is healthy')
+        setTimeout(() => setSyncMessage(''), 3000)
+      }
+    } catch (e: any) {
+      setError(`Health check failed: ${e.message}`)
+    }
+  }
+
+  const handleFullSync = async () => {
+    try {
+      setSyncing(true)
+      setSyncMessage('Syncing Canvas data...')
+      
+      const result = await apiPost<FullSyncResponse>('/full_sync')
+      setSyncMessage(`✅ ${result.message}`)
+      
+      // Refresh data after sync
+      await checkAuthAndFetchData()
+      
+      setTimeout(() => setSyncMessage(''), 5000)
+    } catch (e: any) {
+      setError(`Sync failed: ${e.message}`)
+      setSyncMessage('')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
   useEffect(() => {
     checkAuthAndFetchData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -81,10 +115,29 @@ export default function Page() {
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Canvas AI Labs</h1>
             <p className="text-neutral-400 mt-1 text-sm">Your coursework, at a glance.</p>
           </div>
-          <button
-            className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-full px-4 py-2 text-sm transition"
-            onClick={checkAuthAndFetchData}
-          >Refresh</button>
+          <div className="flex gap-2">
+            <button
+              className="bg-green-600 hover:bg-green-500 text-white rounded-full px-4 py-2 text-sm transition"
+              onClick={handleHealthCheck}
+              disabled={loading}
+            >
+              Health Check
+            </button>
+            <button
+              className="bg-blue-600 hover:bg-blue-500 text-white rounded-full px-4 py-2 text-sm transition disabled:opacity-50"
+              onClick={handleFullSync}
+              disabled={syncing}
+            >
+              {syncing ? 'Syncing...' : 'Full Sync'}
+            </button>
+            <button
+              className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-full px-4 py-2 text-sm transition"
+              onClick={checkAuthAndFetchData}
+              disabled={loading}
+            >
+              Refresh
+            </button>
+          </div>
         </div>
         {error ? (
           <div className="bg-red-500/10 text-red-400 border border-red-500/30 rounded-xl p-3 text-sm flex items-center justify-between">
@@ -93,6 +146,12 @@ export default function Page() {
               className="px-2 py-1 rounded-lg border border-red-500/30 text-red-300 hover:bg-red-500/10 transition"
               onClick={() => { setError(undefined); checkAuthAndFetchData() }}
             >Retry</button>
+          </div>
+        ) : null}
+        
+        {syncMessage ? (
+          <div className="bg-green-500/10 text-green-400 border border-green-500/30 rounded-xl p-3 text-sm">
+            {syncMessage}
           </div>
         ) : null}
 

@@ -4,8 +4,8 @@ Uses APScheduler for background tasks and proactive notifications.
 """
 
 import logging
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, Optional
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -118,7 +118,7 @@ class CanvasSchedulerService:
                             NotificationLog.notification_type == "24h_deadline",
                             NotificationLog.extra_data.contains(str(deadline["assignment_id"])),
                             NotificationLog.sent_at
-                            >= datetime.now(UTC) - timedelta(hours=12),
+                            >= datetime.now(timezone.utc) - timedelta(hours=12),
                         )
                         .first()
                     )
@@ -142,7 +142,7 @@ class CanvasSchedulerService:
                             NotificationLog.notification_type == "3d_deadline",
                             NotificationLog.extra_data.contains(str(deadline["assignment_id"])),
                             NotificationLog.sent_at
-                            >= datetime.now(UTC) - timedelta(days=2),
+                            >= datetime.now(timezone.utc) - timedelta(days=2),
                         )
                         .first()
                     )
@@ -165,7 +165,7 @@ class CanvasSchedulerService:
         finally:
             db.close()
 
-    def get_job_status(self) -> list[dict[str, Any]]:
+    def get_job_status(self) -> List[dict[str, Any]]:
         """Get status of all scheduled jobs."""
         jobs = []
         for job in self.scheduler.get_jobs():
@@ -202,7 +202,7 @@ class CanvasSchedulerService:
 
 # Global scheduler instance
 
-scheduler_service: CanvasSchedulerService | None = None
+scheduler_service: Optional[CanvasSchedulerService] = None
 
 
 def get_scheduler_service() -> CanvasSchedulerService:

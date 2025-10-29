@@ -6,8 +6,8 @@ Provides syllabus summarization, assignment analysis, and intelligent insights.
 import json
 import os
 import re
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -54,7 +54,7 @@ class CanvasLLMService:
                 "key_points": [],
                 "grading_policy": None,
                 "important_dates": [],
-                "analysis_timestamp": datetime.now(UTC).isoformat(),
+                "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         # Clean HTML and prepare text
@@ -112,7 +112,7 @@ class CanvasLLMService:
                 "course_id": course_id,
                 "course_name": course.name,
                 "analysis": analysis,
-                "analysis_timestamp": datetime.now(UTC).isoformat(),
+                "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -122,7 +122,7 @@ class CanvasLLMService:
                 "summary": f"Analysis failed: {str(e)}",
                 "key_points": [],
                 "grading_policy": None,
-                "analysis_timestamp": datetime.now(UTC).isoformat(),
+                "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
     def analyze_assignment(self, assignment_id: int) -> dict[str, Any]:
@@ -191,7 +191,7 @@ class CanvasLLMService:
                 "assignment_name": assignment.name,
                 "course_name": assignment.course.name,
                 "analysis": analysis,
-                "analysis_timestamp": datetime.now(UTC).isoformat(),
+                "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
@@ -209,8 +209,8 @@ class CanvasLLMService:
             .join(Course)
             .filter(
                 Assignment.due_at.isnot(None),
-                Assignment.due_at >= datetime.now(UTC),
-                Assignment.due_at <= datetime.now(UTC) + timedelta(days=days_ahead),
+                Assignment.due_at >= datetime.now(timezone.utc),
+                Assignment.due_at <= datetime.now(timezone.utc) + timedelta(days=days_ahead),
             )
             .order_by(Assignment.due_at)
             .all()
@@ -225,7 +225,7 @@ class CanvasLLMService:
         # Prepare assignment data for LLM
         assignments_data = []
         for assignment in upcoming_assignments[:10]:  # Limit to top 10
-            days_until = (assignment.due_at - datetime.now(UTC)).days
+            days_until = (assignment.due_at - datetime.now(timezone.utc)).days
             assignments_data.append(
                 {
                     "name": assignment.name,
@@ -297,14 +297,14 @@ class CanvasLLMService:
                 "timeframe_days": days_ahead,
                 "assignments_count": len(upcoming_assignments),
                 "study_plan": study_plan,
-                "generated_at": datetime.now(UTC).isoformat(),
+                "generated_at": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:
             return {"user_id": user_id, "error": f"Study plan generation failed: {str(e)}"}
 
     def ask_question(
-        self, user_id: int, question: str, context_course_id: int | None = None
+        self, user_id: int, question: str, context_course_id: Optional[int] = None
     ) -> dict[str, Any]:  # Updated typing for Python 3.9
         """Answer student questions using Canvas data as context."""
         context_data = ""
@@ -362,7 +362,7 @@ class CanvasLLMService:
                 "question": question,
                 "answer": response.content,
                 "context_course_id": context_course_id,
-                "timestamp": datetime.now(UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
 
         except Exception as e:

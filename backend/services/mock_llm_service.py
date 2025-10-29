@@ -3,8 +3,8 @@ Mock LLM service for testing without OpenAI API key.
 Provides simulated intelligent responses for demonstration.
 """
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, Optional
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -67,7 +67,7 @@ class MockCanvasLLMService:
             "course_id": course_id,
             "course_name": course.name,
             "analysis": mock_analysis,
-            "analysis_timestamp": datetime.now(UTC).isoformat(),
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     def analyze_assignment(self, assignment_id: int) -> dict[str, Any]:
@@ -136,7 +136,7 @@ class MockCanvasLLMService:
             "assignment_name": assignment.name,
             "course_name": assignment.course.name,
             "analysis": mock_analysis,
-            "analysis_timestamp": datetime.now(UTC).isoformat(),
+            "analysis_timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     def generate_study_plan(self, user_id: int, days_ahead: int = 14) -> dict[str, Any]:
@@ -147,8 +147,8 @@ class MockCanvasLLMService:
             .join(Course)
             .filter(
                 Assignment.due_at.isnot(None),
-                Assignment.due_at >= datetime.now(UTC),
-                Assignment.due_at <= datetime.now(UTC) + timedelta(days=days_ahead),
+                Assignment.due_at >= datetime.now(timezone.utc),
+                Assignment.due_at <= datetime.now(timezone.utc) + timedelta(days=days_ahead),
             )
             .order_by(Assignment.due_at)
             .limit(10)
@@ -179,7 +179,7 @@ class MockCanvasLLMService:
 
                 priority = (
                     "high"
-                    if (assignment.due_at - datetime.now(UTC)).days <= 2
+                    if (assignment.due_at - datetime.now(timezone.utc)).days <= 2
                     else "medium"
                 )
 
@@ -221,11 +221,11 @@ class MockCanvasLLMService:
             "timeframe_days": days_ahead,
             "assignments_count": len(upcoming_assignments),
             "study_plan": mock_study_plan,
-            "generated_at": datetime.now(UTC).isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
         }
 
     def ask_question(
-        self, user_id: int, question: str, context_course_id: int | None = None
+        self, user_id: int, question: str, context_course_id: Optional[int] = None
     ) -> dict[str, Any]:
         """Mock Q&A responses."""
         # Generate contextual responses based on question keywords
@@ -250,7 +250,7 @@ class MockCanvasLLMService:
             "question": question,
             "answer": answer,
             "context_course_id": context_course_id,
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
 

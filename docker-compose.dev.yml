@@ -32,7 +32,7 @@ services:
       context: .
       dockerfile: backend.Dockerfile
     ports:
-      - "8002:8000"
+      - "8002:8002"
     environment:
       - DATABASE_URL=postgresql://${DB_USER:-canvas_user}:${DB_PASSWORD:-canvas_pass}@db:5432/${DB_NAME:-canvas_db_dev}
       - REDIS_URL=redis://redis:6379
@@ -44,14 +44,28 @@ services:
         condition: service_healthy
     volumes:
       - .:/app
-      - /app/.venv
-    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8002 --reload
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ui:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
 
 volumes:
   postgres_dev_data:

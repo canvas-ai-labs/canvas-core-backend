@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import List, Optional
 
 from dotenv import load_dotenv
 from pydantic import Field, field_validator
@@ -15,13 +16,13 @@ class Settings(BaseSettings):
     if optional features (e.g., Canvas/LLM) are not configured.
     """
 
-    canvas_api_url: str | None = None
-    canvas_api_key: str | None = None
-    openai_api_key: str | None = None
-    database_url: str | None = None
+    canvas_api_url: Optional[str] = None
+    canvas_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    database_url: Optional[str] = None
 
     # CORS
-    allowed_origins: list[str] = Field(default_factory=lambda: ["*"])
+    allowed_origins: List[str] = Field(default_factory=lambda: ["*"])
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def _split_origins(cls, v: str | list[str] | None):
+    def _split_origins(cls, v):
         if v is None:
             return ["*"]
         if isinstance(v, str):

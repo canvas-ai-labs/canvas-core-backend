@@ -4,7 +4,8 @@ Handles syncing courses, assignments, and user data from Canvas API to local dat
 """
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import List, Optional
 
 from canvasapi import Canvas
 from fastapi import Depends
@@ -28,7 +29,7 @@ class CanvasSyncService:
             )
         self.canvas = Canvas(self.settings.canvas_api_url, self.settings.canvas_api_key)
 
-    def sync_user_data(self, user_id: int | None = None) -> SyncRun:
+    def sync_user_data(self, user_id: Optional[int] = None) -> SyncRun:
         """Sync user data from Canvas."""
         sync_run = SyncRun(
             user_id=user_id or 1, sync_type="user", status="running"  # Default user for now
@@ -57,17 +58,17 @@ class CanvasSyncService:
 
             sync_run.items_processed = 1
             sync_run.status = "completed"
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             sync_run.status = "failed"
             sync_run.error_message = str(e)
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         self.db.commit()
         return sync_run
 
-    def sync_courses(self, user_id: int | None = None) -> SyncRun:
+    def sync_courses(self, user_id: Optional[int] = None) -> SyncRun:
         """Sync courses from Canvas."""
         sync_run = SyncRun(user_id=user_id or 1, sync_type="courses", status="running")
         self.db.add(sync_run)
@@ -110,18 +111,18 @@ class CanvasSyncService:
                 sync_run.items_processed += 1
 
             sync_run.status = "completed"
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             sync_run.status = "failed"
             sync_run.error_message = str(e)
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         self.db.commit()
         return sync_run
 
     def sync_assignments(
-        self, course_ids: list[int] | None = None, user_id: int | None = None
+        self, course_ids: Optional[List[int]] = None, user_id: Optional[int] = None
     ) -> SyncRun:
         """Sync assignments from Canvas."""
         sync_run = SyncRun(user_id=user_id or 1, sync_type="assignments", status="running")
@@ -216,17 +217,17 @@ class CanvasSyncService:
                     continue
 
             sync_run.status = "completed"
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             sync_run.status = "failed"
             sync_run.error_message = str(e)
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         self.db.commit()
         return sync_run
 
-    def full_sync(self, user_id: int | None = None) -> SyncRun:
+    def full_sync(self, user_id: Optional[int] = None) -> SyncRun:
         """Perform a full sync of user, courses, and assignments."""
         sync_run = SyncRun(user_id=user_id or 1, sync_type="full", status="running")
         self.db.add(sync_run)
@@ -270,12 +271,12 @@ class CanvasSyncService:
                 ]
                 sync_run.error_message = "; ".join(errors)
 
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         except Exception as e:
             sync_run.status = "failed"
             sync_run.error_message = str(e)
-            sync_run.completed_at = datetime.now(UTC)
+            sync_run.completed_at = datetime.now(timezone.utc)
 
         self.db.commit()
         return sync_run

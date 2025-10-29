@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, List
 
 from dotenv import load_dotenv
 
@@ -32,7 +32,7 @@ def _serialize_course(course: Any) -> dict[str, Any]:
     }
 
 
-def get_user_courses() -> list[dict[str, Any]]:
+def get_user_courses() -> List[dict[str, Any]]:
     """Fetch current user's courses filtered to active + starred.
 
     - Active: enrollment_state="active"
@@ -66,7 +66,7 @@ def get_user_courses() -> list[dict[str, Any]]:
     return [_serialize_course(c) for c in filtered]
 
 
-def get_all_user_courses() -> list[dict[str, Any]]:
+def get_all_user_courses() -> List[dict[str, Any]]:
     """Fetch all courses for the current user (unfiltered, for debugging).
 
     Attempts to include term when available.
@@ -86,7 +86,7 @@ def get_all_user_courses() -> list[dict[str, Any]]:
     return [_serialize_course(c) for c in courses]
 
 
-def get_all_assignments() -> list[dict[str, Any]]:
+def get_all_assignments() -> List[dict[str, Any]]:
     """Fetch assignments from all active, available courses for the current user."""
     try:
         canvas = _get_canvas()
@@ -96,7 +96,7 @@ def get_all_assignments() -> list[dict[str, Any]]:
 
     user = canvas.get_current_user()
     courses = user.get_courses(enrollment_state=["active"], state=["available"])
-    all_assignments: list[dict[str, Any]] = []
+    all_assignments: List[dict[str, Any]] = []
 
     for course in courses:
         course_id = course.id

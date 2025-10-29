@@ -3,8 +3,8 @@ AI-powered analysis service for Canvas data.
 Provides intelligent insights, deadline tracking, and content summarization.
 """
 
-from datetime import UTC, datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, List, Optional
 
 from fastapi import Depends
 from sqlalchemy import and_
@@ -20,10 +20,10 @@ class CanvasAIService:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_upcoming_deadlines(self, user_id: int, days_ahead: int = 7) -> list[dict[str, Any]]:
+    def get_upcoming_deadlines(self, user_id: int, days_ahead: int = 7) -> List[dict[str, Any]]:
         """Get assignments due in the next N days."""
-        cutoff_date = datetime.now(UTC) + timedelta(days=days_ahead)
-        current_time = datetime.now(UTC)
+        cutoff_date = datetime.now(timezone.utc) + timedelta(days=days_ahead)
+        current_time = datetime.now(timezone.utc)
 
         upcoming_assignments = (
             self.db.query(Assignment)
@@ -40,7 +40,7 @@ class CanvasAIService:
             .all()
         )
 
-        deadlines: list[dict[str, Any]] = []
+        deadlines: List[dict[str, Any]] = []
         for assignment in upcoming_assignments:
             days_until_due = (assignment.due_at - current_time).days
             if days_until_due <= 1:
@@ -70,9 +70,9 @@ class CanvasAIService:
 
         return deadlines
 
-    def get_overdue_assignments(self, user_id: int) -> list[dict[str, Any]]:
+    def get_overdue_assignments(self, user_id: int) -> List[dict[str, Any]]:
         """Get assignments that are past due."""
-        current_time = datetime.now(UTC)
+        current_time = datetime.now(timezone.utc)
 
         overdue_assignments = (
             self.db.query(Assignment)
@@ -88,7 +88,7 @@ class CanvasAIService:
             .all()
         )
 
-        overdue: list[dict[str, Any]] = []
+        overdue: List[dict[str, Any]] = []
         for assignment in overdue_assignments:
             days_overdue = (current_time - assignment.due_at).days
             overdue.append(
@@ -105,13 +105,13 @@ class CanvasAIService:
 
         return overdue
 
-    def get_course_workload_analysis(self, user_id: int) -> list[dict[str, Any]]:
+    def get_course_workload_analysis(self, user_id: int) -> List[dict[str, Any]]:
         """Analyze workload distribution across courses."""
-        current_time = datetime.now(UTC)
+        current_time = datetime.now(timezone.utc)
         next_month = current_time + timedelta(days=30)
 
         # Get assignments due in the next month grouped by course
-        courses_data: list[dict[str, Any]] = []
+        courses_data: List[dict[str, Any]] = []
         courses = self.db.query(Course).all()
 
         for course in courses:
@@ -251,7 +251,7 @@ class CanvasAIService:
 
         # Calculate urgency message
         if assignment.due_at:
-            time_until_due = assignment.due_at - datetime.now(UTC)
+            time_until_due = assignment.due_at - datetime.now(timezone.utc)
             days_until = time_until_due.days
             hours_until = time_until_due.seconds // 3600
 
