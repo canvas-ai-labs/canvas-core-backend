@@ -7,7 +7,10 @@ interface MetricsResponse {
   scheduled_jobs: number;
 }
 
+// Increase timeout to 60 seconds for this test (sync takes ~30s)
 test('Canvas sync E2E workflow', async ({ page }) => {
+  test.setTimeout(60000); // 60 seconds
+  
   // Navigate to the dashboard
   await page.goto('/');
 

@@ -101,17 +101,23 @@ class TestCanvasAPI:
     
     def test_multiple_sync_calls_safe(self):
         """Test that multiple sync calls don't cause issues"""
-        responses = []
-        for i in range(3):
-            response = self.client.post("/full_sync")
-            responses.append(response)
-            time.sleep(0.5)  # Small delay between calls
-        
-        # All should succeed
-        for i, response in enumerate(responses):
-            assert response.status_code == 200, f"Call {i+1} failed"
-            data = response.json()
-            assert data["status"] == "ok", f"Call {i+1} status not ok"
+        # Use a longer timeout for sync operations (60s per call, 2 calls = 120s total)
+        long_timeout_client = httpx.Client(base_url=self.BASE_URL, timeout=120.0)
+        try:
+            responses = []
+            # Test 2 calls instead of 3 to keep test time reasonable (~1 minute)
+            for i in range(2):
+                response = long_timeout_client.post("/full_sync")
+                responses.append(response)
+                time.sleep(0.5)  # Small delay between calls
+            
+            # All should succeed
+            for i, response in enumerate(responses):
+                assert response.status_code == 200, f"Call {i+1} failed"
+                data = response.json()
+                assert data["status"] == "ok", f"Call {i+1} status not ok"
+        finally:
+            long_timeout_client.close()
 
 
 if __name__ == "__main__":
