@@ -57,15 +57,19 @@ services:
       context: .
       dockerfile: frontend.Dockerfile
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./ui:/app
       - /app/node_modules
       - /app/.next
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - PORT=3000
+      - HOST=0.0.0.0
     depends_on:
       - backend
+      - db
+      - redis
 
 volumes:
   postgres_dev_data:
