@@ -2,119 +2,223 @@
 
 FastAPI + SQLAlchemy + Alembic backend for Canvas AI Labs.
 
-## Setup
+## 🚀 Quick Start
 
-1. Create and populate a .env file (see .env.example):
-	- DATABASE_URL
-	- CANVAS_API_URL, CANVAS_API_KEY (required for Canvas sync endpoints)
-	- OPENAI_API_KEY (required for LLM endpoints)
+### Prerequisites
+- Docker Desktop installed and running
+- Git (to clone the repo)
 
-2. Install dependencies (prefer a venv):
-	- pip install -r requirements.txt
-	- Optional dev tools: pre-commit install
-
-## Run (Docker-first)
-
-This repository is Docker-first. Start the full development environment using Docker Compose.
-
-Start development services:
-
+### 1️⃣ Clone Repository
 ```bash
-docker compose -f docker-compose.dev.yml up -d --build
+git clone https://github.com/canvas-ai-labs/canvas-core-backend.git
+cd canvas-core-backend
 ```
 
-Access:
+### 2️⃣ Configure Environment
+Create a `.env` file with your Canvas API credentials:
+```bash
+cp .env.example .env
+# Edit .env with your credentials:
+# - DATABASE_URL (auto-configured for Docker)
+# - CANVAS_API_URL, CANVAS_API_KEY (required for Canvas sync)
+# - OPENAI_API_KEY (required for LLM features)
+```
 
-- Backend API: http://localhost:8002
-- Frontend UI: http://localhost:3000
-- Health check: curl http://localhost:8002/health
+### 3️⃣ Start Everything
+```bash
+# Start all services (backend, frontend, database, redis)
+docker compose -f docker-compose.dev.yml up -d
+```
 
-## Alembic
+### 4️⃣ Access the Application
+- **Dashboard**: http://localhost:3000
+- **Backend API**: http://localhost:8002
+- **Health Check**: http://localhost:8002/health
+- **API Docs**: http://localhost:8002/docs
+
+### 5️⃣ Stop Services
+```bash
+docker compose -f docker-compose.dev.yml down
+```
+
+## 📊 What's Running?
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Frontend (Next.js) | 3000 | Dashboard UI |
+| Backend (FastAPI) | 8002 | API & Canvas sync |
+| PostgreSQL | 5432 | Database |
+| Redis | 6379 | Cache & job queue |
+
+## 📊 What's Running?
+
+| Service | Port | Purpose |
+|---------|------|---------|
+| Frontend (Next.js) | 3000 | Dashboard UI |
+| Backend (FastAPI) | 8002 | API & Canvas sync |
+| PostgreSQL | 5432 | Database |
+| Redis | 6379 | Cache & job queue |
+
+## 🛠️ Development Commands
+
+### View Logs
+```bash
+# View all logs
+docker compose -f docker-compose.dev.yml logs -f
+
+# View specific service
+docker logs canvas-core-backend-backend-1 -f
+docker logs canvas-core-backend-frontend-1 -f
+```
+
+### Check Service Status
+```bash
+docker compose -f docker-compose.dev.yml ps
+```
+
+### Rebuild After Code Changes
+```bash
+# Rebuild and restart (for Dockerfile changes)
+docker compose -f docker-compose.dev.yml up -d --build
+
+# Note: Hot reload is enabled, so most code changes apply automatically
+```
+
+## 🗄️ Database Management
+
+## 🗄️ Database Management
+
+### Alembic Migrations
 
 - Configure DATABASE_URL in .env
 - To run migrations:
 
+```bash
 alembic upgrade head
+```
 
 - To autogenerate after model changes (review the diff before applying):
 
+```bash
 alembic revision --autogenerate -m "update models"
-
-## Linting/Formatting/Types
-
-- Ruff: ruff check .
-- Black: black .
-- isort: isort .
-- mypy: mypy .
-
-## Docker Development
-
-Quick start with Docker:
-
-```bash
-# Start development environment
-make dev
-
-# Check services
-make ps
-
-# View logs
-make logs
-
-# Stop services
-make down
 ```
 
-Access:
-- Backend API: http://localhost:8002
-- Frontend UI: http://localhost:3000
-- Health check: `make health`
+## 🧪 Testing
 
-## E2E Testing
-
-The project includes comprehensive end-to-end testing that validates the full Canvas sync workflow:
-
-### Quick E2E Test
-
+### Run All Tests
 ```bash
-# Install dependencies and run all E2E tests
-make e2e-full
-```
-
-### Individual Test Components
-
-```bash
-# Install E2E testing dependencies
-make e2e-install
-
-# Run backend API tests only
-make e2e-test-backend
-
-# Run frontend Playwright tests only
-make e2e-ui
-
-# Run both backend and frontend tests
+# Run backend API tests + Playwright E2E tests
 make e2e-run
 ```
 
-### What the E2E Tests Do
+### Backend API Tests Only
+```bash
+.venv/bin/pytest tests/test_api_endpoints.py -v
+```
+
+### Frontend E2E Tests Only
+```bash
+cd ui && npx playwright test
+```
+
+### What the Tests Validate
 
 1. **Backend API Tests** (`tests/test_api_endpoints.py`):
-   - Validates `/health`, `/full_sync`, and `/metrics` endpoints
-   - Tests data consistency between sync operations and metrics
-   - Ensures proper API response structures
+   - ✅ Health endpoint returns 200
+   - ✅ Full sync endpoint completes successfully
+   - ✅ Metrics endpoint returns correct structure
+   - ✅ Data consistency between sync and metrics
+   - ✅ CORS headers are present
+   - ✅ Multiple sync calls are safe
 
 2. **Frontend E2E Tests** (`ui/tests/e2e/canvas_sync.spec.ts`):
-   - Navigates to dashboard and verifies no error banners
-   - Clicks "Full Sync" button and waits for completion
-   - Polls `/api/metrics` until courses > 0 (60s timeout)
-   - Verifies dashboard cards update with real data
-   - Takes screenshot at `test-artifacts/canvas-sync.png`
+   - ✅ Dashboard loads without errors
+   - ✅ "Full Sync" button triggers sync
+   - ✅ Dashboard updates with real Canvas data
+   - ✅ Screenshot saved at `ui/test-artifacts/canvas-sync.png`
+   - ✅ Tests run in Chrome, Firefox, and Safari
 
-The E2E test validates the complete user journey: dashboard loads → sync triggers → data fetches → UI updates successfully.
+## 🔧 Code Quality Tools
 
-## Smoke Test
+## 🔧 Code Quality Tools
 
-- Start server and visit root: should serve static dashboard.
-- Try API endpoints under /api (courses, assignments, ai/*, llm/*). Some require env keys.
+```bash
+# Linting
+ruff check .
+
+# Formatting
+black .
+
+# Import sorting
+isort .
+
+# Type checking
+mypy .
+```
+
+## 📝 API Endpoints
+
+### Core Endpoints
+- `GET /health` - Health check
+- `GET /metrics` - Get sync metrics (courses, assignments, deadlines count)
+- `POST /full_sync` - Trigger full Canvas data sync
+
+### Data Endpoints
+- `GET /courses` - List all courses
+- `GET /assignments` - List all assignments
+
+### AI/LLM Endpoints
+- Requires `OPENAI_API_KEY` in `.env`
+- See `/docs` for full API documentation
+
+## 🐳 Architecture
+
+```
+┌─────────────────┐         ┌──────────────────┐
+│   Next.js UI    │◄────────│  FastAPI Backend │
+│  (port 3000)    │         │   (port 8002)    │
+└─────────────────┘         └──────────────────┘
+                                     │
+                            ┌────────┴────────┐
+                            ▼                 ▼
+                    ┌──────────────┐  ┌─────────┐
+                    │  PostgreSQL  │  │  Redis  │
+                    │  (port 5432) │  │ (6379)  │
+                    └──────────────┘  └─────────┘
+```
+
+- **Frontend**: Next.js with proxy (`/api/*` → `backend:8002`)
+- **Backend**: FastAPI with auto-reload, CORS configured
+- **Database**: PostgreSQL with persistent volumes
+- **Cache**: Redis for job queue and caching
+
+## 🚢 Production Deployment
+
+Use the production compose file:
+
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Differences from dev:
+- No auto-reload
+- Optimized builds
+- Production-ready settings
+
+## 📚 Additional Resources
+
+- **Makefile commands**: Run `make help` for all available commands
+- **API Documentation**: http://localhost:8002/docs (when running)
+- **Alembic migrations**: See `alembic/versions/` for migration history
+
+## 🏷️ Version
+
+Current stable version: **v0.1.0**
+
+Baseline features:
+- ✅ Docker-first architecture
+- ✅ Backend on port 8002 with normalized routes
+- ✅ Next.js proxy working with service name resolution
+- ✅ Full E2E test coverage (backend + browser tests)
+- ✅ Python 3.9 compatibility
 
